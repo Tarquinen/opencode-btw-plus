@@ -2,6 +2,8 @@
 
 OpenCode's `/btw`, with searchable history saved per session and a more focused UI.
 
+![BTW answer dock above the OpenCode prompt](https://raw.githubusercontent.com/Tarquinen/opencode-btw-plus/main/assets/btw-plus.png)
+
 ## Install
 
 Requires OpenCode V2 2.0.11+. Add these entries to `plugins` in `~/.config/opencode/cli.json`:
