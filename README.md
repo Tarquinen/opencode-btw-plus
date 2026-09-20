@@ -21,3 +21,5 @@ This replaces the built-in `/btw`.
 
 - **`/btw <question>`** — ask a side question, just like the built-in command.
 - **`/btw`** — browse saved answers, or ask a question if history is empty.
+
+Answers appear above the prompt without taking focus. The dock closes when you send your next message; the answer stays in history. Press **F6** (or click the answer) to use **C** copy, **H** history, **E** expand, and **X** close. **Esc** or **F6** returns to your draft. **Ctrl+N** asks another question while the answer or history is focused.

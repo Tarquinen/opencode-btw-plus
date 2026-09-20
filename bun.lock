@@ -6,6 +6,7 @@
       "name": "opencode-btw-plus",
       "dependencies": {
         "@opencode/theme": "2.0.11",
+        "string-width": "^7.2.0",
       },
       "devDependencies": {
         "@opentui/core": "0.5.10",

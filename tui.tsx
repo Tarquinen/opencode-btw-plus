@@ -1,8 +1,11 @@
 import { Plugin } from "@opencode/plugin/tui"
 import { createClipboard, createHostClipboard, createRendererClipboardAdapter } from "@opentui/core"
-import { createSignal, Show } from "solid-js"
-import { BtwDialog } from "./src/dialog"
+import { createEffect, createSignal, Show } from "solid-js"
+import { createStore } from "solid-js/store"
+import { AnswerDialog, HistoryDialog } from "./src/dialog"
+import { Answer } from "./src/answer"
 import type { History, Interaction } from "./src/history"
+import type { PickerState } from "./src/history-picker"
 import { Pending } from "./src/spinner"
 
 // Match the built-in /btw: one transient generation, no tool loop or session messages.
@@ -16,11 +19,17 @@ export default Plugin.define({
   id: "btw-plus",
   setup(context) {
     const [pending, setPending] = createSignal(0)
+    const [answers, setAnswers] = createSignal<Record<string, Interaction | undefined>>({})
+    const pickers = new Map<string, ReturnType<typeof createStore<PickerState>>>()
     let active = true
     let clipboard: ReturnType<typeof createClipboard> | undefined
 
     function history(sessionID: string) {
       return context.storage.store<History>(`session.${sessionID}`, { initial: { entries: [] } })
+    }
+
+    function setAnswer(sessionID: string, entry?: Interaction) {
+      setAnswers((current) => ({ ...current, [sessionID]: entry }))
     }
 
     async function copy(text: string) {
@@ -34,13 +43,37 @@ export default Plugin.define({
       throw new Error("Could not copy the answer to the clipboard")
     }
 
-    function show(sessionID: string, answer?: Interaction) {
+    function picker(sessionID: string) {
+      let state = pickers.get(sessionID)
+      if (!state) {
+        state = createStore<PickerState>({ query: "", selected: "new" })
+        pickers.set(sessionID, state)
+      }
+      return state
+    }
+
+    function showHistory(sessionID: string) {
       const [saved] = history(sessionID)
+      const [state, setState] = picker(sessionID)
       context.ui.dialog.show(() => (
-        <BtwDialog
+        <HistoryDialog
           context={context}
           entries={saved.entries}
-          initialAnswer={answer}
+          state={state}
+          select={(id) => setState("selected", id)}
+          search={(query) => setState("query", query)}
+          open={(entry) => expand(sessionID, entry)}
+          ask={() => { void ask(sessionID) }}
+        />
+      ))
+    }
+
+    function expand(sessionID: string, entry: Interaction) {
+      context.ui.dialog.show(() => (
+        <AnswerDialog
+          context={context}
+          entry={entry}
+          history={() => showHistory(sessionID)}
           ask={() => { void ask(sessionID) }}
           copy={copy}
         />
@@ -61,8 +94,8 @@ export default Plugin.define({
         } catch (error) {
           if (active) context.ui.toast.show({ message: `Could not save BTW history: ${String(error)}`, variant: "error" })
         }
-        // An in-flight answer can still be saved after a plugin reload, but must not reopen its old UI.
-        if (active) show(sessionID, entry)
+        // Keep the result with its session without taking focus or replacing an open dialog.
+        if (active) setAnswer(sessionID, entry)
       } catch (error) {
         if (active) context.ui.toast.show({ message: String(error), variant: "error" })
       } finally {
@@ -79,6 +112,42 @@ export default Plugin.define({
     context.ui.slot({
       append: "prompt.footer.status",
       render: () => <Show when={pending() > 0}><Pending context={context} /></Show>,
+    })
+
+    context.ui.slot({
+      append: "session.composer.top",
+      render: (slot) => (
+        <box>
+          <Show when={answers()[slot.sessionID]} keyed>
+            {(entry) => {
+              // Pending inputs include local submissions before the server acknowledges them.
+              // Remember existing IDs so an earlier send cannot dismiss a newly arrived answer.
+              const submitted = new Set<string>()
+              for (const input of context.data.session.pending.list(slot.sessionID)) submitted.add(input.id)
+              createEffect(() => {
+                for (const input of context.data.session.pending.list(slot.sessionID)) {
+                  if (input.type === "user" && !submitted.has(input.id)) {
+                    setAnswer(slot.sessionID)
+                    break
+                  }
+                }
+              })
+              return (
+                <Answer
+                  context={context}
+                  entry={entry}
+                  docked
+                  copy={copy}
+                  back={() => setAnswer(slot.sessionID)}
+                  history={() => showHistory(slot.sessionID)}
+                  ask={() => { void ask(slot.sessionID) }}
+                  expand={() => expand(slot.sessionID, entry)}
+                />
+              )
+            }}
+          </Show>
+        </box>
+      ),
     })
 
     context.ui.slot({
@@ -100,7 +169,7 @@ export default Plugin.define({
                 if (question) return ask(sessionID, question)
                 const [saved] = history(sessionID)
                 if (saved.entries.length === 0) return ask(sessionID)
-                show(sessionID)
+                showHistory(sessionID)
               },
             },
             {

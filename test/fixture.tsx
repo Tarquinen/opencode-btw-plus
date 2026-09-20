@@ -1,12 +1,13 @@
 import { afterAll, afterEach, beforeAll, mock } from "bun:test"
+import type { SessionInboxInfo } from "@opencode/client"
 import type { Context, DialogOptions, KeymapCommand, Route, ToastOptions } from "@opencode/plugin/tui/context"
 import { resolveTheme } from "@opencode/theme/tui"
-import { destroyTreeSitterClient, getTreeSitterClient } from "@opentui/core"
+import { destroyTreeSitterClient, getTreeSitterClient, type InputRenderable } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { KeymapProvider, useBindings } from "@opentui/keymap/solid"
 import { render, type JSX } from "@opentui/solid"
-import { createSignal, Show } from "solid-js"
+import { createEffect, createSignal, Show } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import plugin from "../tui"
@@ -79,11 +80,13 @@ export async function mount(options: {
   const keymap = createDefaultOpenTuiKeymap(screen.renderer)
   const [dialog, setDialog] = createSignal<(() => JSX.Element) | undefined>()
   const [route, setRoute] = createSignal<Route>({ type: "session", sessionID: options.sessionID ?? "ses_one" })
+  const [pendingInputs, setPendingInputs] = createStore<Record<string, SessionInboxInfo[]>>({})
   const toasts: ToastOptions[] = []
   const prompts: string[] = []
   const commands = new Map<string, KeymapCommand>()
   const stores = new Map<string, ReturnType<typeof createStore<History>>>()
-  const slots: Array<() => JSX.Element> = []
+  const slots = new Map<string, Array<(input: { sessionID: string }) => JSX.Element>>()
+  const [prompt, setPrompt] = createSignal<InputRenderable>()
   const generate = mock(options.generate ?? (async () => ({ text: "A concise **answer**." })))
   let presentation: DialogOptions = {}
   let dispose: (() => void | Promise<void>) | undefined
@@ -93,6 +96,7 @@ export async function mount(options: {
     renderer: screen.renderer,
     theme,
     client: { session: { generate } },
+    data: { session: { pending: { list: (sessionID: string) => pendingInputs[sessionID] ?? [] } } },
     storage: {
       store(key: string, config: { initial: History }) {
         const file = `${directory}/${key}.json`
@@ -114,6 +118,7 @@ export async function mount(options: {
       },
     },
     keymap: {
+      mode: { current: () => dialog() ? "modal" : "base" },
       layer(input: Parameters<Context["keymap"]["layer"]>[0]) {
         useBindings(() => {
           const layer = input()
@@ -126,7 +131,8 @@ export async function mount(options: {
             }
             if (command.bind) bindings.push({ key: command.bind, cmd: command.id ?? (() => command.run()) })
           }
-          return { commands: named, bindings, priority: layer.priority, target: layer.target }
+          const enabled = layer.mode === "modal" ? Boolean(dialog()) : layer.mode === "base" ? !dialog() : true
+          return { commands: named, bindings, priority: layer.priority, target: layer.target, enabled }
         })
       },
       shortcuts: () => [],
@@ -134,7 +140,12 @@ export async function mount(options: {
     ui: {
       router: { current: route },
       toast: { show: (toast: ToastOptions) => toasts.push(toast) },
-      slot(claim: { render: () => JSX.Element }) { slots.push(claim.render); return () => {} },
+      slot(claim: { append: string; render: (input: { sessionID: string }) => JSX.Element }) {
+        const list = slots.get(claim.append) ?? []
+        list.push(claim.render)
+        slots.set(claim.append, list)
+        return () => {}
+      },
       dialog: {
         show(view: () => JSX.Element) { setDialog(() => view) },
         set(value: DialogOptions) { presentation = value },
@@ -147,14 +158,47 @@ export async function mount(options: {
       },
     },
   } as unknown as Context
+
+  function submitMessage(text: string, sessionID: string) {
+    const item: SessionInboxInfo = {
+      id: crypto.randomUUID(), sessionID, type: "user", payload: { text }, delivery: "steer", time: { created: Date.now() },
+    }
+    setPendingInputs(sessionID, [...(pendingInputs[sessionID] ?? []), item])
+    return item
+  }
+
   function Fixture() {
     // The host's Escape layer is installed before the plugin's modal layers.
-    useBindings(() => ({ bindings: [{ key: "escape", cmd: () => context.ui.dialog.clear() }] }))
+    useBindings(() => ({ enabled: Boolean(dialog()), bindings: [{ key: "escape", cmd: () => context.ui.dialog.clear() }] }))
     dispose = plugin.setup(context) as () => void | Promise<void>
-    return <>
-      {slots.map((slot) => slot())}
-      <Show when={dialog()}><box width="100%">{dialog()?.()}</box></Show>
-    </>
+    createEffect(() => {
+      if (dialog()) prompt()?.blur()
+      else prompt()?.focus()
+    })
+    function renderSlots(path: string, sessionID: string) {
+      return slots.get(path)?.map((slot) => <box>{slot({ sessionID })}</box>)
+    }
+    const sessionID = () => {
+      const current = route()
+      return current.type === "session" ? current.sessionID : undefined
+    }
+    return <box height="100%">
+      {renderSlots("app", "")}
+      <text flexGrow={1}>Main conversation</text>
+      <Show when={sessionID()} keyed>
+        {(id) => <box flexShrink={0}>
+          {renderSlots("session.composer.top", id)}
+          <input id="main-prompt" ref={setPrompt} placeholder="Main session prompt" onSubmit={() => {
+            const text = prompt()!.value
+            if (!text.trim()) return
+            submitMessage(text, id)
+            prompt()!.value = ""
+          }} />
+          {renderSlots("prompt.footer.status", id)}
+        </box>}
+      </Show>
+      <Show when={dialog()}><box position="absolute" width="100%" backgroundColor={theme.background.base}>{dialog()?.()}</box></Show>
+    </box>
   }
   await render(() => <KeymapProvider keymap={keymap}><Fixture /></KeymapProvider>, screen.renderer)
   screen.renderer.start()
@@ -168,7 +212,11 @@ export async function mount(options: {
   }
   cleanups.push(close)
   return {
-    ...screen, context, generate, toasts, prompts, close, directory, setRoute,
+    ...screen, context, generate, toasts, prompts, close, directory, setRoute, prompt, dialog, submitMessage, setPendingInputs,
+    focusAnswer: async () => {
+      commands.get("btw-plus.focus")!.run()
+      await screen.waitFor(() => screen.renderer.currentFocusedRenderable?.id === "btw-answer-dock")
+    },
     presentation: () => presentation,
     invoke: async (input?: string) => { await commands.get("session.aside")!.run(input); await screen.flush() },
     saved: (sessionID = "ses_one"): History => JSON.parse(readFileSync(`${directory}/session.${sessionID}.json`, "utf8")),
