@@ -1,0 +1,32 @@
+{
+  "name": "opencode-btw-plus",
+  "version": "0.1.0",
+  "description": "OpenCode side questions worth keeping: /btw with persistent, searchable history.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    "./tui": "./tui.tsx"
+  },
+  "files": ["tui.tsx", "src", "README.md", "LICENSE"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --conditions=browser --preload @opentui/solid/preload"
+  },
+  "dependencies": {
+    "@opencode/theme": "2.0.11"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": "^2.0.11",
+    "@opentui/core": "^0.5.10",
+    "@opentui/solid": "^0.5.10",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@opentui/core": "0.5.10",
+    "@opentui/keymap": "0.5.10",
+    "@opentui/solid": "0.5.10",
+    "@types/bun": "^1.3.0",
+    "solid-js": "1.9.12",
+    "typescript": "^5.9.0"
+  }
+}
