@@ -4,13 +4,13 @@ OpenCode's `/btw`, with searchable history saved per session.
 
 ## Install
 
-Requires OpenCode V2 2.0.11+. Run `bun install`, then add these entries to `plugins` in `~/.config/opencode/cli.json`:
+Requires OpenCode V2 2.0.11+. Add these entries to `plugins` in `~/.config/opencode/cli.json`:
 
 ```json
 {
   "plugins": [
     "-opencode.btw",
-    "/absolute/path/to/btw-plus"
+    "opencode-btw-plus@latest"
   ]
 }
 ```

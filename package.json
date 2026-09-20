@@ -4,6 +4,10 @@
   "description": "OpenCode side questions worth keeping: /btw with persistent, searchable history.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tarquinen/opencode-btw-plus"
+  },
   "exports": {
     "./tui": "./tui.tsx"
   },
