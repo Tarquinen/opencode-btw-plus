@@ -5,7 +5,7 @@ import { ensureRuntimePluginSupport } from "@opentui/solid/runtime-plugin-suppor
 import { createSignal } from "solid-js"
 import { BtwDialog } from "../src/dialog"
 
-test.skipIf(!process.env.OPENCODE_SOURCE)("answer shortcuts work inside OpenCode's dialog and keymap providers", async () => {
+test.skipIf(!process.env.OPENCODE_SOURCE)("answer and history shortcuts work inside OpenCode's dialog and keymap providers", async () => {
   const solid = await import("solid-js")
   const store = await import("solid-js/store")
   Bun.plugin({
@@ -28,6 +28,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("answer shortcuts work inside OpenCode
     import(`${root}/test/fixture/tui-runtime.ts`),
   ])
   const entry = { id: "saved", question: "Saved side question", answer: "An answer.", createdAt: Date.now() }
+  let questionsAsked = 0
   let show: () => void = () => {}
   let dialog: { stack: unknown[] } | undefined
   let screen: Awaited<ReturnType<typeof testRender>> | undefined
@@ -47,7 +48,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("answer shortcuts work inside OpenCode
         },
       },
     } as unknown as Context
-    show = () => host.replace(() => <BtwDialog context={context} entries={[entry]} initialAnswer={entry} copy={async () => {}} ask={() => {}} />)
+    show = () => host.replace(() => <BtwDialog context={context} entries={[entry]} initialAnswer={entry} copy={async () => {}} ask={() => { questionsAsked++ }} />)
     return null
   }
   const [ready, setReady] = createSignal(false)
@@ -67,6 +68,10 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("answer shortcuts work inside OpenCode
     show()
     await screen.waitForFrame((frame) => frame.includes("An answer."))
     expect(screen.captureCharFrame()).toContain("h history")
+    expect(screen.captureCharFrame()).toContain("ctrl+n new question")
+    screen.mockInput.pressKey("n", { ctrl: true })
+    await screen.flush()
+    expect(questionsAsked).toBe(1)
     screen.mockInput.pressKey("h")
     await screen.waitForFrame((frame) => frame.includes("BTW history"))
     expect(screen.captureCharFrame()).toContain("BTW history")
@@ -77,6 +82,10 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("answer shortcuts work inside OpenCode
     await screen.flush()
     expect(screen.captureCharFrame()).toContain("BTW history")
     expect(dialog!.stack).toHaveLength(1)
+    // OpenCode also binds Ctrl+N to dialog.select.next; the BTW action should win.
+    screen.mockInput.pressKey("n", { ctrl: true })
+    await screen.flush()
+    expect(questionsAsked).toBe(2)
   } finally {
     screen?.renderer.destroy()
   }

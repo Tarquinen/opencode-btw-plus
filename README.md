@@ -22,4 +22,4 @@ This replaces the built-in `/btw`.
 - **`/btw <question>`** — ask a side question, just like the built-in command.
 - **`/btw`** — browse saved answers, or ask a question if history is empty.
 
-In an answer: **C** copies, **H** opens history, **N** asks another question, and **Esc** goes back or closes.
+**Ctrl+N** asks a new question from either view. In an answer: **C** copies, **H** opens history, and **Esc** goes back or closes.

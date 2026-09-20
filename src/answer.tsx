@@ -38,7 +38,7 @@ export function Answer(props: {
     commands: [
       { bind: "c", title: "Copy answer", run: copy },
       { bind: "h", title: "BTW history", run: props.history },
-      { bind: "n", title: "Ask another question", run: props.ask },
+      { id: "btw-plus.new", bind: "ctrl+n", title: "Ask a new question", run: props.ask },
       {
         bind: "escape",
         title: "Back",
@@ -96,7 +96,9 @@ export function Answer(props: {
           <span style={{ fg: theme().text.muted }}>{copied() ? "" : " copy"}</span>
         </text>
         <text onMouseUp={props.history} fg={theme().text.muted}><b>h</b> history</text>
-        <text onMouseUp={props.ask} fg={theme().text.muted}><b>n</b> ask another</text>
+        <text onMouseUp={props.ask} fg={theme().text.muted}>
+          <b>{context.keymap.shortcuts("btw-plus.new")[0] ?? "ctrl+n"}</b> new question
+        </text>
         <text fg={theme().text.muted}>↑/↓ scroll</text>
       </box>
     </box>

@@ -79,6 +79,8 @@ export function HistoryPicker(props: {
   context.keymap.layer(() => ({
     mode: "modal",
     commands: [
+      // Put this first so it wins over OpenCode's Ctrl+N binding for the next item.
+      { id: "btw-plus.new", bind: "ctrl+n", title: "Ask a new question", run: props.ask },
       // Reuse the picker command IDs so user keybinds and Vim navigation work here too.
       { id: "dialog.select.prev", bind: "up", title: "Previous item", run: () => move(-1) },
       { id: "dialog.select.next", bind: "down", title: "Next item", run: () => move(1) },
@@ -87,7 +89,6 @@ export function HistoryPicker(props: {
       { id: "dialog.select.home", bind: "home", title: "First item", run: () => props.select("new") },
       { id: "dialog.select.end", bind: "end", title: "Last item", run: () => props.select(ids().at(-1)!) },
       { id: "dialog.select.submit", bind: "return", title: "Open answer", run: submit },
-      { id: "btw-plus.new", bind: "ctrl+n", title: "Ask a new question", run: props.ask },
     ],
   }))
 
