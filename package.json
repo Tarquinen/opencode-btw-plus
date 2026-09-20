@@ -1,6 +1,6 @@
 {
   "name": "opencode-btw-plus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenCode side questions worth keeping: /btw with persistent, searchable history.",
   "type": "module",
   "license": "MIT",
