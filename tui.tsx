@@ -89,7 +89,7 @@ export default Plugin.define({
           commands: [
             {
               id: "session.aside",
-              title: "BTW history",
+              title: "Ask a question · leave blank for history",
               group: "Session",
               palette: true,
               slash: { name: "btw", arguments: true },
