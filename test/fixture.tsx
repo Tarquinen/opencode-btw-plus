@@ -1,17 +1,22 @@
 import { afterAll, afterEach, beforeAll, mock } from "bun:test"
 import type { SessionInboxInfo } from "@opencode/client"
 import type { Context, DialogOptions, KeymapCommand, Route, ToastOptions } from "@opencode/plugin/tui/context"
+import { Plugin } from "@opencode/plugin/tui"
 import { resolveTheme } from "@opencode/theme/tui"
 import { destroyTreeSitterClient, getTreeSitterClient, type InputRenderable } from "@opentui/core"
 import { createTestRenderer } from "@opentui/core/testing"
 import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { KeymapProvider, useBindings } from "@opentui/keymap/solid"
 import { render, type JSX } from "@opentui/solid"
+import { ensureRuntimePluginSupport } from "@opentui/solid/runtime-plugin-support/configure"
 import { createEffect, createSignal, Show } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
-import plugin from "../tui"
 import type { History } from "../src/history"
+
+const entrypoint = process.env.OPENCODE_BTW_TEST_ENTRYPOINT
+if (entrypoint) ensureRuntimePluginSupport({ additional: { "@opencode/plugin/tui": { Plugin } } })
+const { default: plugin }: typeof import("../tui") = await import(entrypoint ?? "../tui")
 
 const scale = {
   100: "#ffffff", 200: "#dddddd", 300: "#bbbbbb", 400: "#999999", 500: "#777777",
