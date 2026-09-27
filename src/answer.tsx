@@ -278,7 +278,7 @@ export function Answer(props: {
           </text>
           <text fg={theme().text.muted}>↑/↓ scroll</text>
         </Show>
-        <text marginLeft="auto" fg={theme().text.muted} onMouseUp={() => focused() ? releaseFocus() : focus()}>
+        <text marginLeft="auto" fg={theme().hue.interactive[200]} onMouseUp={() => focused() ? releaseFocus() : focus()}>
           {focused() ? "esc prompt" : `${context.keymap.shortcuts("btw-plus.focus")[0] ?? "f6"} focus`}
         </text>
       </box>
