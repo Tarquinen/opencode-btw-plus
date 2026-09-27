@@ -132,10 +132,13 @@ export function Answer(props: {
             <text fg={theme().text.muted} onMouseUp={props.back}>esc</text>
           </box>
           <box paddingTop={1}>
-            <text fg={theme().text.muted} wrapMode="word">{props.entry.question}</text>
+            <text fg={theme().text.muted} height={1} wrapMode="none" truncate>
+              {props.entry.question.replace(/\s+/g, " ")}
+            </text>
           </box>
         </box>
         <scrollbox
+          id="btw-answer-expanded-body"
           ref={(element: ScrollBoxRenderable) => (scroll = element)}
           maxHeight={Math.max(3, Math.min(20, dimensions().height - 10))}
           backgroundColor={context.theme.background.raised.high}
@@ -153,7 +156,7 @@ export function Answer(props: {
             />
           </box>
         </scrollbox>
-        <box flexDirection="row" flexWrap="wrap" gap={3} paddingLeft={2} paddingRight={2} paddingBottom={1}>
+        <box flexDirection="row" flexWrap="wrap" columnGap={3} paddingLeft={2} paddingRight={2} paddingBottom={1}>
           <text onMouseUp={() => void copy()}>
             <span style={{ fg: copied() ? theme().text.feedback.success.base : theme().text.base }}>
               <b>{copied() ? "✓ copied" : "c"}</b>
@@ -226,12 +229,12 @@ export function Answer(props: {
               event.stopPropagation()
             }}
           >
-            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => void copy()} fg={copied() ? theme().text.feedback.success.base : theme().text.muted}>
+            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => void copy()} fg={copied() ? theme().text.feedback.success.base : theme().hue.interactive[200]}>
               {copied() ? "✓ copied" : shortcuts() ? "c copy" : "Copy"}
             </text>
-            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(props.history)} fg={theme().text.muted}>{shortcuts() ? "h history" : "History"}</text>
-            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(() => props.expand?.())} fg={theme().text.muted}>{shortcuts() ? "e expand" : "Expand"}</text>
-            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(props.back)} fg={theme().text.muted}>{shortcuts() ? "x close" : "Close"}</text>
+            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(props.history)} fg={theme().hue.interactive[200]}>{shortcuts() ? "h history" : "History"}</text>
+            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(() => props.expand?.())} fg={theme().hue.interactive[200]}>{shortcuts() ? "e expand" : "Expand"}</text>
+            <text flexShrink={0} height={1} wrapMode="none" onMouseUp={() => leave(props.back)} fg={theme().hue.interactive[200]}>{shortcuts() ? "x close" : "Close"}</text>
           </box>
         </box>
       </box>
@@ -275,7 +278,7 @@ export function Answer(props: {
           </text>
           <text fg={theme().text.muted}>↑/↓ scroll</text>
         </Show>
-        <text marginLeft="auto" fg={theme().text.muted} onMouseUp={() => focused() ? releaseFocus() : focus()}>
+        <text marginLeft="auto" fg={theme().hue.interactive[200]} onMouseUp={() => focused() ? releaseFocus() : focus()}>
           {focused() ? "esc prompt" : `${context.keymap.shortcuts("btw-plus.focus")[0] ?? "f6"} focus`}
         </text>
       </box>

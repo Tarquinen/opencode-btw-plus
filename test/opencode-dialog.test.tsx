@@ -36,6 +36,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("docked answers, palette focus, and di
   let questionsAsked = 0
   let copied = ""
   let show: () => void = () => {}
+  let openAnswer: (entry: Interaction) => void = () => {}
   let palette: () => void = () => {}
   let prompt: InputRenderable | undefined
   let dialog: { stack: unknown[] } | undefined
@@ -70,6 +71,7 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("docked answers, palette focus, and di
     function expand(value: Interaction) {
       host.replace(() => <AnswerDialog context={context} entry={value} copy={async () => {}} history={history} ask={ask} />)
     }
+    openAnswer = expand
     show = () => setEntryInDock(entry)
     palette = () => host.replace(() => <CommandPaletteDialog />)
     // Match the main prompt: dialogs temporarily disable it, then restore its focus.
@@ -194,6 +196,21 @@ test.skipIf(!process.env.OPENCODE_SOURCE)("docked answers, palette focus, and di
     screen.mockInput.pressKey("x")
     await screen.waitFor(() => screen!.renderer.root.findDescendantById("btw-answer-dock") === undefined)
     expect(screen.renderer.currentFocusedEditor).toBe(prompt!)
+
+    // A large pasted question must not make the centered dialog taller than the terminal.
+    openAnswer({ ...entry, question: "Explain these logs:\n" + "A long pasted log entry.\n".repeat(1000) })
+    for (const [width, height] of [[88, 34], [46, 18], [32, 18], [88, 34]]) {
+      screen.resize(width, height)
+      await screen.waitForFrame((frame) => frame.includes("An answer."))
+      await screen.flush()
+      const expanded = screen.renderer.root.findDescendantById("btw-answer-expanded")!
+      expect(expanded.y).toBeGreaterThanOrEqual(0)
+      expect(expanded.y + expanded.height).toBeLessThanOrEqual(height)
+      expect(screen.captureCharFrame()).toContain("An answer.")
+      expect(screen.captureCharFrame()).toContain("ctrl+n new question")
+    }
+    screen.mockInput.pressEscape()
+    await screen.waitFor(() => dialog!.stack.length === 0 && screen!.renderer.currentFocusedEditor === prompt)
   } finally {
     screen?.renderer.destroy()
   }
