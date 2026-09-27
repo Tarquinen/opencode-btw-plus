@@ -4,6 +4,18 @@ import { writeFileSync } from "node:fs"
 import type { Interaction } from "../src/history"
 import { mount, tempStorage } from "./fixture"
 
+test("the pending indicator appears and clears without remounting the plugin", async () => {
+  let finish: (answer: { text: string }) => void = () => {}
+  const f = await mount({ generate: () => new Promise((resolve) => { finish = resolve }) })
+  const pending = f.invoke("Still thinking")
+  const spinner = /[\u2800-\u28ff] \/btw/
+  await f.waitForFrame((frame) => spinner.test(frame))
+  finish({ text: "Finished thinking." })
+  await pending
+  expect(f.captureCharFrame()).not.toMatch(spinner)
+  expect(f.captureCharFrame()).toContain("Finished thinking.")
+})
+
 test("a generated answer survives closing and reopening the terminal, isolated by session", async () => {
   const directory = tempStorage()
   const first = await mount({ directory })

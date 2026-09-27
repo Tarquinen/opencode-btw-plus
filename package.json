@@ -9,10 +9,12 @@
     "url": "https://github.com/Tarquinen/opencode-btw-plus"
   },
   "exports": {
-    "./tui": "./tui.tsx"
+    "./tui": "./dist/tui.js"
   },
-  "files": ["tui.tsx", "src", "README.md", "LICENSE"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
+    "build": "bun scripts/build.ts",
+    "prepack": "bun run build",
     "typecheck": "tsc --noEmit",
     "test": "bun test --conditions=browser --preload @opentui/solid/preload"
   },
