@@ -11,7 +11,7 @@ import { render, type JSX } from "@opentui/solid"
 import { ensureRuntimePluginSupport } from "@opentui/solid/runtime-plugin-support/configure"
 import { createEffect, createSignal, Show } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import type { History } from "../src/history"
 
 const entrypoint = process.env.OPENCODE_BTW_TEST_ENTRYPOINT
@@ -68,6 +68,7 @@ afterEach(async () => {
 })
 
 export function tempStorage() {
+  mkdirSync("/tmp/opencode", { recursive: true })
   const directory = mkdtempSync("/tmp/opencode/btw-plus-")
   cleanups.push(() => rmSync(directory, { recursive: true, force: true }))
   return directory

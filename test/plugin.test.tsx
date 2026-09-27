@@ -12,6 +12,7 @@ test("the pending indicator appears and clears without remounting the plugin", a
   await f.waitForFrame((frame) => spinner.test(frame))
   finish({ text: "Finished thinking." })
   await pending
+  await f.waitForFrame((frame) => frame.includes("Finished thinking."))
   expect(f.captureCharFrame()).not.toMatch(spinner)
   expect(f.captureCharFrame()).toContain("Finished thinking.")
 })
