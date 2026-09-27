@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { InputRenderable, type Renderable, type TextRenderable } from "@opentui/core"
+import { InputRenderable, type Renderable, type ScrollBoxRenderable, type TextRenderable } from "@opentui/core"
 import { writeFileSync } from "node:fs"
 import type { Interaction } from "../src/history"
 import { mount, tempStorage } from "./fixture"
@@ -213,6 +213,41 @@ test("the dock preserves typing focus, expands on request, and scopes its shortc
   await f.waitForFrame((frame) => frame.includes("Next side question"))
   expect(f.saved().entries).toHaveLength(2)
   expect(f.prompt()!.value).toBe("Draft: chxen")
+})
+
+test("expanded answers remain visible and scrollable after very long pasted questions", async () => {
+  let text = ""
+  for (let index = 1; index <= 30; index++) text += `Answer paragraph ${index}.\n\n`
+  const f = await mount({ generate: async () => ({ text }) })
+  const questions = [
+    "Explain this log: " + '{"message":"A long log entry with 界面 and 👩‍💻 characters"} '.repeat(1000),
+    "Explain these lines:\n" + "A long line of pasted text.\n".repeat(1000),
+  ]
+  for (const question of questions) {
+    await f.invoke(question)
+    expect(f.saved().entries.at(-1)?.question).toBe(question.trim())
+    expect(f.generate.mock.calls.at(-1)![0].prompt).toEndWith(question.trim())
+    await f.focusAnswer()
+    f.mockInput.pressKey("e")
+    await f.flush()
+    for (const [width, height] of [[88, 34], [46, 18], [32, 18], [88, 34]]) {
+      f.resize(width, height)
+      await f.flush()
+      const expanded = f.renderer.root.findDescendantById("btw-answer-expanded")!
+      const body = f.renderer.root.findDescendantById("btw-answer-expanded-body") as ScrollBoxRenderable
+      const answerRows = (frame: string) => frame.split("\n").slice(body.y, body.y + body.height).join("\n")
+      f.mockInput.pressKey("HOME")
+      await f.waitForFrame((frame) => answerRows(frame).includes("Answer paragraph 1."))
+      expect(expanded.y).toBeGreaterThanOrEqual(0)
+      expect(expanded.y + expanded.height).toBeLessThanOrEqual(height)
+      expect(f.captureCharFrame()).toContain("ctrl+n new question")
+      f.mockInput.pressKey("END")
+      await f.waitForFrame((frame) => answerRows(frame).includes("Answer paragraph 30."))
+      expect(body.scrollTop).toBeGreaterThan(0)
+    }
+    f.mockInput.pressEscape()
+    await f.flush()
+  }
 })
 
 test("long answers stay compact, scroll, and leave space for the prompt on small terminals", async () => {
